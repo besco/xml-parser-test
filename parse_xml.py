@@ -2,49 +2,102 @@
 
 import urllib
 import xml.etree.ElementTree as etree
-import sys
-
+import sys, time
 
 def openUrl(url):
   try:
     uHandle=urllib.urlopen(url)
   except:
     print "Error open url: "+url
+    return('neok')
   else:
     data=uHandle.read(uHandle)
-    return('neok')
-  finally:
     uHandle.close()
     return(data)
 
+def getCase(uInput):
+  if uInput.startswith('--'):
+    if uInput.find('=')>=0:
+      (key,value)=uInput.split('=')
+      return({'key':key,'value':value})
+    else:
+      key=uInput
+      value=True
+      return({'key':key,'value':value})
+  else:
+    return(-1)
 
-url='http://export.yandex.ru/weather-ng/forecasts/28440.xml'
-root=''
-ns={'site':'http://weather.yandex.ru/forecast'}
-data=openUrl(url)
+def getValuesYandex(data,uCity,uType,uTime):
+  ns,url=setUrl(uCity)
+  if data!='neok':
+    try:
+      root=etree.fromstring(data)
+    except:
+      return('City '+uCity+' not found ('+url+')');
+    else:
+      parsed_head=root.attrib
+      city=parsed_head['city']
+      eng_city=parsed_head['slug']
+      country=parsed_head['country']
+      dist=parsed_head['part']
 
-if data!='neok':
-  root=etree.fromstring(data)
-  parsed_head=root.attrib
-  city=parsed_head['city']
-  country=parsed_head['country']
-  dist=parsed_head['part']
+      for uTree in root.findall('site:'+uTime,ns):
+        temp=uTree.find('site:temperature',ns)
+        ico=uTree.find('site:image-v3',ns)
+        weather=uTree.find('site:weather_type',ns)
+        wind_dir=uTree.find('site:wind_direction',ns)
+        wind_spd=uTree.find('site:wind_speed',ns)
+    if uType=='temp':
+      return('temp:'+temp.text,'city:'+city)
+    if uType=='type':
+      return('type:'+weather.text,'city:'+city)
+    if uType=='icon':
+      return('icon:'+ico.text,'city:'+city)
+    
 
-  for fact in root.findall('site:fact',ns):
-    temp=fact.find('site:temperature',ns)
-    ico=fact.find('site:image-v3',ns)
-    weather=fact.find('site:weather_type',ns)
-    wind_dir=fact.find('site:wind_direction',ns)
-    wind_spd=fact.find('site:wind_speed',ns)
+def setUrl(city):
+  ns={'site':'http://weather.yandex.ru/forecast'}
+  if city:
+    url='http://export.yandex.ru/weather-ng/forecasts/'+city+'.xml'
+    return(ns,url)
+  else:
+    url='http://export.yandex.ru/weather-ng/forecasts/28440.xml'
+    return(ns,url)
 
-for case in sys.argv:
-  if case=='v':
-    print weather.text
-  if case=='i':
-    print ico.text
-  if case=='a':
-    print temp.text
-  if case=='c':
-    print city
-  if case=='d':
-    print dist
+city=None;
+date='fact'
+outAnswer=[];
+out=''
+
+args=sys.argv
+selfName=args[0]
+args.pop(0)
+if len(args)==0:
+  print "help"
+else:
+  for case in args:
+    resCase=getCase(case)
+    if resCase!=-1:
+      if resCase['key']=='--city':
+        city=resCase['value'];
+      if resCase['key']=='--tomorrow':
+        date='tomorrow'
+
+  ns,url=setUrl(city)
+  data=openUrl(url)
+
+  for case in args:
+    resCase=getCase(case)
+    if resCase!=-1:
+      if resCase['key']=='--temp':
+        outAnswer.append(getValuesYandex(data,city,'temp',date))
+      if resCase['key']=='--type':
+        outAnswer.append(getValuesYandex(data,city,'type',date))
+      if resCase['key']=='--icon':
+        outAnswer.append(getValuesYandex(data,city,'icon',date))
+  for answers in outAnswer:
+    value,city = answers
+    out = out+value+';'
+  out=out+city
+
+  print out
