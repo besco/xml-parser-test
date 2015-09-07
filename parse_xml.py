@@ -73,7 +73,12 @@ args=sys.argv
 selfName=args[0]
 args.pop(0)
 if len(args)==0:
-  print "help"
+  print 'Use '+selfName+' with args:'
+  print '  --temp - get temperature'
+  print '  --type - get weather'
+  print '  --icon - get icon of weather'
+  print '  --city=<city_id> City ID on yandex (find your city here: https://pogoda.yandex.ru/static/cities.xml'
+  print ''
 else:
   for case in args:
     resCase=getCase(case)
