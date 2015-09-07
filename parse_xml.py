@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
 import urllib
-from xml.dom import minidom
-import xml.dom
 import xml.etree.ElementTree as etree
 import sys
 
